@@ -1,0 +1,9 @@
+Changelog for quills.remoteblogging
+
+    (name of developer listed in brackets)
+
+quills.remoteblogging - 0.1 Unreleased
+
+    - Initial package structure.
+      [zopeskel]
+

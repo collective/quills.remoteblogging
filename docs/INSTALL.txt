@@ -1,0 +1,14 @@
+quills.remoteblogging Installation
+=======================
+
+ * When you're reading this you have probably already run 
+   ``easy_install quills.remoteblogging``. Find out how to install setuptools
+   (and EasyInstall) here:
+   http://peak.telecommunity.com/DevCenter/EasyInstall
+
+ * Create a file called ``quills.remoteblogging-configure.zcml`` in the
+   ``/path/to/instance/etc/package-includes`` directory.  The file
+   should only contain this::
+
+       <include package="quills.remoteblogging" />
+
