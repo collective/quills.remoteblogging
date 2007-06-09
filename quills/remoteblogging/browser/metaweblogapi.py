@@ -14,7 +14,7 @@ from Products.CMFCore.utils import getToolByName
 from plone.i18n.normalizer.interfaces import IIDNormalizer
 
 # Local imports
-from sf.remoteauthor.interfaces import IMetaWeblogAPI
+from quills.remoteblogging.interfaces import IMetaWeblogAPI
 
 
 class MetaWeblogAPI(BrowserView):
