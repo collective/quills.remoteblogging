@@ -15,6 +15,7 @@ from plone.i18n.normalizer.interfaces import IIDNormalizer
 
 # Local imports
 from quills.remoteblogging.interfaces import IMetaWeblogAPI
+from quills.core.interfaces import IWeblog, IWeblogEntry
 
 
 class MetaWeblogAPI(BrowserView):
@@ -26,70 +27,54 @@ class MetaWeblogAPI(BrowserView):
     excerptExtractor = re.compile("<h2 class=[\"|']QuillsExcerpt[\"|']>(.*)</h2>")
     divExtractor = re.compile("<div>((.*\n)*.*)</div>")
 
-    def __init__(self, context, request):
-        self.weblogview = getMultiAdapter((context, request), name="weblogview")
-        return super(MetaWeblogAPI, self).__init__(context, request)
-
     def newPost(self, blogid, username, password, struct, publish):
         """See IMetaWeblogAPI.
         """
-        weblog = self._getByUID(blogid)
+        weblog = IWeblog(self._getByUID(blogid))
         # preparing the ingredients:
         body  = struct.get('description', struct.get('Description'))
         # if the body contains an excerpt, we extract it:
         excerpt, body = self.extractDescriptionFromBody(body)
         title = struct.get('title', struct.get('Title'))
-        categories = struct.get('categories', struct.get('Categories'))
+        topics = struct.get('categories', struct.get('Categories'))
         effective_date = getEffectiveDate(struct)
-        id = getUtility(IIDNormalizer).normalize(title)
-        weblog.invokeFactory(id=id, type_name='WeblogEntry', title=title)
-        entry = getattr(weblog, id)
-        entry.setText(body, mimetype='text/html')
-        entry.setDescription(excerpt)
-        if categories:
-            entry.setSubject(categories)
-        entry_uid = entry.UID()
+        entry = weblog.addEntry(title=title,
+                                excerpt=excerpt,
+                                text=text,
+                                topics=topics,)
         if publish:
             wf_tool = getToolByName(self.context, 'portal_workflow')
             entry.setEffectiveDate(effective_date)
             wf_tool.doActionFor(entry, 'publish')
-        entry.reindexObject()
-        return entry_uid
+        return self.getUIDFor(entry)
 
     def editPost(self, postid, username, password, struct, publish):
         """See IMetaWeblogAPI.
         """
-        entry = self._getByUID(postid)
+        entry = IWeblogEntry(self._getByUID(postid))
         body  = struct.get('description', struct.get('Description'))
         excerpt, body = self.extractDescriptionFromBody(body)
         title = struct.get('title', struct.get('Title'))
-        categories = struct.get('categories', struct.get('Categories'))
-        effective_date = getEffectiveDate(struct)
-        entry.setEffectiveDate(effective_date)
-        entry.setText(body, mimetype='text/html')
-        entry.setTitle(title)
-        entry.setDescription(excerpt)
-        if categories:
-            entry.setSubject(categories)
-        else:
-            entry.setSubject([])
-        entry.reindexObject()
+        topics = struct.get('categories', struct.get('Categories'))
+        entry.edit(title, excerpt, text, topics)
         if publish:
-           wf_tool = getToolByName(self.context, 'portal_workflow')
-           entry.setEffectiveDate(DateTime.DateTime())
-           wf_tool.doActionFor(entry, 'publish')
+            #effective_date = getEffectiveDate(struct)
+            #entry.setEffectiveDate(effective_date)
+            wf_tool = getToolByName(self.context, 'portal_workflow')
+            entry.setEffectiveDate(DateTime.DateTime())
+            wf_tool.doActionFor(entry, 'publish')
         return True
 
     def getPost(self, postid, username, password):
         """See IMetaWeblogAPI.
         """
-        entry = self._getByUID(postid)
+        entry = IWeblogEntry(self._getByUID(postid))
         return self.entryStruct(entry)
 
     def getCategories(self, blogid, username, password):
         """See IMetaWeblogAPI.
         """
-        weblog = self._getByUID(blogid)
+        weblog = IWeblog(self._getByUID(blogid))
         topics = weblog.getTopics()
         # 2005-12-13 tomster:
         # this is kind of ugly: according to the RFC we should return an array
@@ -115,25 +100,17 @@ class MetaWeblogAPI(BrowserView):
     def deletePost(self, postid, username, password, publish):
         """See IMetaWeblogAPI.
         """
-        entry = self._getByUID(postid)
-        entry.aq_inner.aq_parent.manage_delObjects(entry.getId())
+        entry = IWeblogEntry(self._getByUID(postid))
+        weblog = entry.getParentWeblog()
+        weblog.deleteEntry(entry.getId())
         return True
 
     def getRecentPosts(self, blogid, username, password, num):
         """See IMetaWeblogAPI.
         """
-        weblog = self._getByUID(blogid)
-        catalog = getToolByName(self.context, 'portal_catalog')
-        results = catalog(
-            meta_type='WeblogEntry',
-            path='/'.join(weblog.getPhysicalPath()),
-            sort_on='effective',
-            sort_order='reverse')
-        posts = []
-        for item in results[:num]:
-            obj = item.getObject()
-            posts.append(self.entryStruct(obj))
-        return posts
+        weblog = IWeblog(self._getByUID(blogid))
+        entries = weblog.getEntries(max=20)
+        return [self.entryStruct(entry) for entry in entries]
 
     def getUsersBlogs(self, appkey, username, password):
         """See IMetaWeblogAPI.
@@ -199,26 +176,27 @@ class MetaWeblogAPI(BrowserView):
             body = "<div>\n"
         else:
             body = ""
-        if obj.Description() is not None and obj.Description() != "":
-            excerpt = "<h2 class='QuillsExcerpt'>%s</h2>" % obj.Description()
+        excerpt = obj.getExcerpt()
+        if excerpt is not None and excerpt != '':
+            excerpt = '<h2 class="QuillsExcerpt">%s</h2>' % excerpt
             if needToWrap:
                 body += excerpt + text
             else:
                 # if there already exists a wrapping div, we need to inject
                 # the excerpt inside of that, rather than just prepending it to
                 # the body.
-                body += "<div>%s%s</div>" % (excerpt, self.divExtractor.split(text)[1])
+                body += '<div>%s%s</div>' % (excerpt, self.divExtractor.split(text)[1])
         else:
             body += text
         if needToWrap:
             body += "\n</div>"
         struct = {
-            'postid': obj.UID(),
-            'dateCreated': obj.effective(),
+            'postid': self._getUIDFor(obj),
+            'dateCreated': obj.effective(), # XXX This isn't in an interface!
             'title': obj.Title(),
             'description' : body,
-            'categories' : [cat.getId() for cat in obj.getCategories()],
-            'link' : obj.absolute_url()
+            'categories' : [topic.getId() for topic in obj.getTopics()],
+            'link' : self.getArchiveURLFor(obj)
         }
         return struct
 
@@ -241,7 +219,13 @@ class MetaWeblogAPI(BrowserView):
     def _getByUID(self, uid):
         if uid=='0' or uid=='' or uid is None:
             return self.context
-        return self.weblogview.getByUID(uid)
+        uid_catalog = getToolByName(self.context, 'uid_catalog')
+        lazy_cat = uid_catalog(UID=uid)
+        obj = lazy_cat[0].getObject()
+        return obj
+
+    def _getUIDFor(self, obj):
+        return obj.UID()
 
 
 def getEffectiveDate(struct):
