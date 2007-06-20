@@ -23,20 +23,8 @@ class IReadableMetaWeblogAPI(Interface):
         """
 
     def getUsersBlogs(appkey, username, password):
-        """TODO: getUsersBlogs.
+        """XXX
         """
-        # This method returns a list with details for *only* the weblog
-        # instance that it is being called through.  The previous
-        # implementation (commented out above) searched for all weblogs
-        # across the portal and returned them.  However, this causes
-        # problems with multi-user blogs - there can only be one 'creator' -
-        # and doesn't make a lot of sense, to my mind.  If/when we
-        # componentise this code into a Five-ish view, it should be
-        # possible to implement a getUsersBlogs for the portal root object
-        # that *does* return all weblogs within the portal.  Until that day
-        # users will simply need to know the URL of the weblogs that they
-        # wish to work with and set their remote blogging client
-        # appropriately.
 
     def getUserInfo(appkey, username, password):
         """Returns returns a struct containing userinfo
@@ -77,9 +65,43 @@ class IMetaWeblogAPI(IReadableMetaWeblogAPI,
     """
     """
 
-    #def extractDescriptionFromBody(body):
-    #    """If the body contains a leading <h2> element, this is extraced as its
-    #    description. The body without that element is then returned as new body.
-    #    """
+
+class IUserManager(Interface):
+
+    def getWeblogsForUser(user_id):
+        """Return a sequence of dictionaries for each of the weblogs that
+        `user_id' has access to.
+            [
+                {'url': parent_blog.absolute_url(),
+                 'blogid' : parent_blog.UID(),
+                 'blogName' : parent_blog.title_or_id(),
+                },
+            ]
+        """
+
+    def getUserInfo(user_id):
+        """Return a dictionary of details for `user_id'.
+            info = {'name'      : 'no name',
+                    'email'     : 'no email',
+                    'userid'    : 'no user id',
+                    'firstname' : 'no first name',
+                    'lastname'  : 'no last name',
+                    'url'       : 'no url',}
+        """
 
 
+class IUIDManager(Interface):
+    """
+    """
+
+    def getByUID(uid):
+        """
+        """
+
+    def getUIDFor(obj):
+        """
+        """
+
+    def getUID():
+        """
+        """
