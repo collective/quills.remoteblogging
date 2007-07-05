@@ -129,30 +129,9 @@ class MetaWeblogAPI(BrowserView):
     def entryStruct(self, entry):
         """See IMetaWeblogAPI.
         """
-        # description is used here as container for the full entry, including
-        # the excerpt. the excerpt is inserted as <h2> element. The whole
-        # description is wrapped in a <div> to ensure validity of the resulting
-        # HTML and feeds.
         text = entry.getText()
-        needToWrap = not text.startswith("<div>")
-        if needToWrap:
-            body = "<div>\n"
-        else:
-            body = ""
         excerpt = entry.getExcerpt()
-        if excerpt is not None and excerpt != '':
-            excerpt = '<h2 class="QuillsExcerpt">%s</h2>' % excerpt
-            if needToWrap:
-                body += excerpt + text
-            else:
-                # if there already exists a wrapping div, we need to inject
-                # the excerpt inside of that, rather than just prepending it to
-                # the body.
-                body += '<div>%s%s</div>' % (excerpt, self.divExtractor.split(text)[1])
-        else:
-            body += text
-        if needToWrap:
-            body += "\n</div>"
+        body = self.embedExcerptInBody(text, excerpt)
         # Lookup a view for the entry so that we can figure out its archive URL.
         weview = getMultiAdapter((entry, self.request), u'weblogentry_view')
         struct = {
@@ -168,7 +147,7 @@ class MetaWeblogAPI(BrowserView):
     excerptExtractor = re.compile("<h2 class=[\"|']QuillsExcerpt[\"|']>(.*)</h2>")
     divExtractor = re.compile("<div>((.*\n)*.*)</div>")
 
-    def extractDescriptionFromBody(self, body):
+    def extractExcerptFromBody(self, body):
         """If the body contains a leading <h2> element, this is extraced as its
         description. The body without that element is then returned as new body.
         """
@@ -184,6 +163,33 @@ class MetaWeblogAPI(BrowserView):
         strippedBody = body_parts[0] + body_parts[2]
         return excerptString, strippedBody
 
+    def embedExcerptInBody(self, text, excerpt):
+        """
+        """
+        # description is used here as container for the full entry, including
+        # the excerpt. the excerpt is inserted as <h2> element. The whole
+        # description is wrapped in a <div> to ensure validity of the resulting
+        # HTML and feeds.
+        needToWrap = not text.startswith("<div>")
+        if needToWrap:
+            body = "<div>\n"
+        else:
+            body = ""
+        if excerpt is not None and excerpt != '':
+            excerpt = '<h2 class="QuillsExcerpt">%s</h2>' % excerpt
+            if needToWrap:
+                body += excerpt + text
+            else:
+                # if there already exists a wrapping div, we need to inject
+                # the excerpt inside of that, rather than just prepending it to
+                # the body.
+                body += '<div>%s%s</div>' % (excerpt,
+                                             self.divExtractor.split(text)[1])
+        else:
+            body += text
+        if needToWrap:
+            body += "\n</div>"
+        return body
 
 def getPublicationDate(struct):
     """Extract the effective date from the struct, or return a default
