@@ -1,0 +1,111 @@
+Let's explore and test the MetaWeblogAPI support here.
+
+The test-case class should have made self.mwenabled, self.blogid, self.appkey
+and self.bloguserid available to us.  We'll check that (and save a few
+keystrokes in this file).
+
+  >>> mwenabled = self.mwenabled
+  >>> appkey = self.appkey
+  >>> blogid = self.blogid
+  >>> bloguserid = self.bloguserid
+
+Given that the object is MetaWeblogAPI-enabled (probably by some sort of ZCML
+configuration), we should be able to lookup the appropriate view on it.  First
+we need a bit of infrastructure.
+
+  >>> from zope.component import getMultiAdapter
+  >>> from zope.publisher.browser import TestRequest
+  >>> request = TestRequest()
+
+Now we can lookup the view.
+
+  >>> mwview = getMultiAdapter((mwenabled, request), name='metaWeblog')
+
+What blogs are there for the bloguser we have in the application we have a view
+for?
+
+  >>> blogs = mwview.getUsersBlogs(appkey, bloguserid, 'foopassword')
+  >>> blogs #doctest: +ELLIPSIS
+  [{'url': 'http://...', 'blogid': ..., 'blogName': ...}]
+
+We can also find out some information about the user.
+
+  >>> userinfo = mwview.getUserInfo(appkey, bloguserid, 'foopassword')
+  >>> userinfo #doctest: +ELLIPSIS
+  {'name': '...', 'firstname': '...', 'url': '...', 'lastname': '...', 'userid': '...', 'email': '...'}
+
+With the view, we can add a new post.
+
+  >>> newpoststruct = {  'title'       :   'the post title'
+  ...                  , 'categories'  :   ['first-category', 'second-topic']
+  ...                  , 'description' :   'I am the actual body of the post.'
+  ...                 }
+  >>> newpostuid = mwview.newPost(blogid=blogid,
+  ...                             username='foo',
+  ...                             password='bar',
+  ...                             struct=newpoststruct,
+  ...                             publish=False)
+
+The new post has been added, and we know its uid, so we can fetch it back
+through the view.
+
+  >>> post1 = mwview.getPost(newpostuid, username='foo', password='bar')
+  >>> from pprint import pprint
+  >>> pprint(post1) #doctest: +ELLIPSIS
+  {'categories': ['first-category', 'second-topic'],
+   'dateCreated': None,
+   'description': '<div>\nI am the actual body of the post.\n</div>',
+   'link': '...',
+   'postid': '...',
+   'title': 'the post title'}
+
+Hmm, maybe that first post wasn't so great.  Let's edit it a bit.
+
+  >>> editpoststruct = {  'title'       :   'the post title - amended'
+  ...                   , 'categories'  :   ['first-category',]
+  ...                   , 'description' :   'I am the amended body of the post.'
+  ...                  }
+  >>> mwview.editPost(newpostuid,
+  ...                 username='foo',
+  ...                 password='bar',
+  ...                 struct=editpoststruct,
+  ...                 publish=False)
+  True
+
+Now let's check that our edit took effect.
+
+  >>> post1edited = mwview.getPost(newpostuid, username='foo', password='bar')
+  >>> pprint(post1edited) #doctest: +ELLIPSIS
+  {'categories': ['first-category'],
+   'dateCreated': None,
+   'description': '<div>\nI am the amended body of the post.\n</div>',
+   'link': '...',
+   'postid': '...',
+   'title': 'the post title - amended'}
+
+So, editing works.  Let's see the querying interface in action.
+
+  >>> mwview.getRecentPosts(blogid, 'username', 'password', 20)
+  []
+
+Yup, that should be an empty list because our post has not been published yet.
+N.B. We used publish=False in our newPost and editPost calls.  So, let's edit
+again, but this time do a publish as well.
+
+  >>> mwview.editPost(newpostuid,
+  ...                 username='foo',
+  ...                 password='bar',
+  ...                 struct=editpoststruct,
+  ...                 publish=True)
+  True
+
+Now getRecentPosts shows our post.
+
+  >>> recent = mwview.getRecentPosts(blogid, 'username', 'password', 20)
+  >>> pprint(recent) #doctest: +ELLIPSIS
+  [{'categories': ['first-category'],
+    'dateCreated': DateTime(...),
+    'description': '<div>\nI am the amended body of the post.\n</div>',
+    'link': '...',
+    'postid': '...',
+    'title': 'the post title - amended'}]

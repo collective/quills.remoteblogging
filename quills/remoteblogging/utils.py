@@ -71,7 +71,7 @@ class CaselessDict:
     def __str__(self):
         return repr(self)
 
-    def get(self, key, alt):
+    def get(self, key, alt=None):
         if self.has_key(key):
             return self.__getitem__(key)
         return alt

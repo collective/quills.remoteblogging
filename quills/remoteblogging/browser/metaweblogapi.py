@@ -35,7 +35,7 @@ class MetaWeblogAPI(BrowserView):
         # preparing the ingredients:
         body  = struct.get('description')
         # if the body contains an excerpt, we extract it:
-        excerpt, body = self.extractDescriptionFromBody(body)
+        excerpt, text = self.extractExcerptFromBody(body)
         title = struct.get('title')
         topics = struct.get('categories')
         entry = weblog.addEntry(title=title,
@@ -45,7 +45,7 @@ class MetaWeblogAPI(BrowserView):
         if publish:
             pubdate = getPublicationDate(struct)
             IWorkflowedWeblogEntry(entry).publish(pubdate)
-        return self.getUIDFor(entry)
+        return IUIDManager(entry).getUID()
 
     def editPost(self, postid, username, password, struct, publish):
         """See IMetaWeblogAPI.
@@ -54,7 +54,7 @@ class MetaWeblogAPI(BrowserView):
         entry = IUIDManager(self.context).getByUID(postid)
         entry = IWeblogEntry(entry)
         body  = struct.get('description')
-        excerpt, body = self.extractDescriptionFromBody(body)
+        excerpt, text = self.extractExcerptFromBody(body)
         title = struct.get('title')
         topics = struct.get('categories')
         entry.edit(title, excerpt, text, topics)
@@ -111,7 +111,7 @@ class MetaWeblogAPI(BrowserView):
         """
         weblog = IUIDManager(self.context).getByUID(blogid)
         weblog = IWeblog(weblog)
-        entries = weblog.getEntries(max=20) # XXX 20 could be configurable.
+        entries = weblog.getEntries(maximum=num)
         return [self.entryStruct(entry) for entry in entries]
 
     def getUsersBlogs(self, appkey, username, password):
@@ -132,15 +132,27 @@ class MetaWeblogAPI(BrowserView):
         text = entry.getText()
         excerpt = entry.getExcerpt()
         body = self.embedExcerptInBody(text, excerpt)
-        # Lookup a view for the entry so that we can figure out its archive URL.
-        weview = getMultiAdapter((entry, self.request), u'weblogentry_view')
+        if entry.isPublished():
+            # Lookup a view for the entry so that we can figure out its archive
+            # URL.
+            weview = getMultiAdapter((entry, self.request),
+                                     name='weblogentry_view')
+            link = weview.getArchiveURLFor(entry)
+        else:
+            # If the entry isn't published, then we can't determine its archive
+            # URL, so we have to just use something else.  entry may be a real
+            # content object, or an adapter for one...
+            try:
+                link = entry.absolute_url()
+            except AttributError:
+                link = entry.context.absolute_url()
         struct = {
             'postid': IUIDManager(entry).getUID(),
             'dateCreated': entry.getPublicationDate(),
-            'title': entry.Title(),
+            'title': entry.getTitle(),
             'description' : body,
             'categories' : [topic.getId() for topic in entry.getTopics()],
-            'link' : weview.getArchiveURLFor(entry)
+            'link' : link
         }
         return struct
 
