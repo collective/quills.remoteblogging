@@ -168,8 +168,7 @@ class MetaWeblogAPI(BrowserView):
             return "", body
         # Use the regex to get the h2-element string
         excerptString = excerpt.groups()[0]
-        # Assuming, that there is only one excerpt element (which is why we're
-        # using 'id' rather than 'class') we can now return the a leading,
+        # Assuming, that there is only one excerpt element we can now return the leading,
         # opening <div> plus the second element of the split as body: re
         body_parts = self.excerptExtractor.split(body)
         strippedBody = body_parts[0] + body_parts[2]
