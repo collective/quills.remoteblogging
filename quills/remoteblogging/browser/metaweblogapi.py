@@ -22,6 +22,10 @@ from quills.remoteblogging.utils import CaselessDict
 
 class MetaWeblogAPI(BrowserView):
     """http://www.xmlrpc.com/metaWeblogApi
+
+    >>> from zope.interface.verify import verifyClass
+    >>> verifyClass(IMetaWeblogAPI, MetaWeblogAPI)
+    True
     """
 
     implements(IMetaWeblogAPI)
