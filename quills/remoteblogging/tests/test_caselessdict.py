@@ -11,6 +11,67 @@
 # http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/66315
 # ********************************************
 
+# FIXME: @tim2p: where are you even using this? why did you add it in the first place? 
+# and why did you forget to include the definition of `caselessDict`? do we need this?
+
+class caselessDict:
+    def __init__(self,inDict=None):
+        """Constructor: takes conventional dictionary
+           as input (or nothing)"""
+        self.dict = {}
+        if inDict != None:
+            for key in inDict:
+                k = key.lower() 
+                self.dict[k] = (key, inDict[key])
+        self.keyList = self.dict.keys()
+        return
+
+    def __iter__(self):
+        self.iterPosition = 0
+        return(self)
+
+    def next(self):
+        if self.iterPosition >= len(self.keyList):
+            raise StopIteration
+        x = self.dict[self.keyList[self.iterPosition]][0]
+        self.iterPosition += 1
+        return x
+
+    def __getitem__(self, key):
+        k = key.lower()
+        return self.dict[k][1]
+
+    def __setitem__(self, key, value):
+        k = key.lower()
+        self.dict[k] = (key, value)
+        self.keyList = self.dict.keys()
+
+    def has_key(self, key):
+        k = key.lower()
+        return k in self.keyList
+
+    def __len__(self):
+        return len(self.dict)
+
+    def keys(self):
+        return [v[0] for v in self.dict.values()]
+
+    def values(self):
+        return [v[1] for v in self.dict.values()]
+
+    def items(self):
+        return self.dict.values()
+
+    def __contains__(self, item):
+        return self.dict.has_key(item.lower())
+        
+    def __repr__(self):
+        items = ", ".join([("%r: %r" % (k,v)) for k,v in self.items()])
+        return "{%s}" % items
+
+    def __str__(self):
+        return repr(self)
+
 if __name__ == '__main__':
     foundError = False
 
