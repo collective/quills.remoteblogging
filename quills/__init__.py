@@ -1,2 +1,8 @@
 # See http://peak.telecommunity.com/DevCenter/setuptools#namespace-packages
-__import__('pkg_resources').declare_namespace(__name__)
+try:
+    __import__('pkg_resources').declare_namespace(__name__)
+except ImportError:
+    from pkgutil import extend_path
+    __path__ = None # PYFLAKES: just to make pyflakes happy
+    __path__ = extend_path(__path__, __name__)
+
