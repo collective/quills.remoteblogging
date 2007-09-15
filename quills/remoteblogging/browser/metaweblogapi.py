@@ -5,13 +5,7 @@ import re
 import DateTime
 from Products.Five import BrowserView
 from zope.interface import implements
-from zope.component import getMultiAdapter, getUtility
-
-# CMF imports
-from Products.CMFCore.utils import getToolByName
-
-# Plone imports
-from plone.i18n.normalizer.interfaces import IIDNormalizer
+from zope.component import getMultiAdapter
 
 # Local imports
 from quills.core.interfaces import IWeblog, IWeblogEntry, IWorkflowedWeblogEntry
@@ -133,23 +127,32 @@ class MetaWeblogAPI(BrowserView):
     def entryStruct(self, entry):
         """See IMetaWeblogAPI.
         """
-        text = entry.getText()
-        excerpt = entry.getExcerpt()
-        body = self.embedExcerptInBody(text, excerpt)
+        # make sure we got an object, not just a brain
+        try:
+            entry = entry.getObject()
+        except AttributeError:
+            pass
+        body = entry.getRawText()
+        # if the post is HTML we attempt to inject its excerpt into the body:
+        if entry.text.getContentType() == 'text/html':
+            excerpt = entry.getExcerpt()
+            body = self.embedExcerptInBody(body, excerpt)
+
         if entry.isPublished():
             # Lookup a view for the entry so that we can figure out its archive
             # URL.
-            weview = getMultiAdapter((entry, self.request),
+            webview = getMultiAdapter((entry, self.request),
                                      name='weblogentry_view')
-            link = weview.getArchiveURLFor(entry)
+            link = webview.getArchiveURLFor(entry)
         else:
             # If the entry isn't published, then we can't determine its archive
             # URL, so we have to just use something else.  entry may be a real
             # content object, or an adapter for one...
             try:
                 link = entry.absolute_url()
-            except AttributError:
+            except AttributeError:
                 link = entry.context.absolute_url()
+
         struct = {
             'postid': IUIDManager(entry).getUID(),
             'dateCreated': entry.getPublicationDate(),
@@ -181,8 +184,8 @@ class MetaWeblogAPI(BrowserView):
     def embedExcerptInBody(self, text, excerpt):
         """
         """
-        # description is used here as container for the full entry, including
-        # the excerpt. the excerpt is inserted as <h2> element. The whole
+        # the RSS `description` field is (ab-)used here as container for the _full_ entry, 
+        # including the excerpt. the excerpt is inserted as <h2> element. The whole
         # description is wrapped in a <div> to ensure validity of the resulting
         # HTML and feeds.
         needToWrap = not text.startswith("<div>")
