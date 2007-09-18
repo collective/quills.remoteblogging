@@ -1,8 +1,8 @@
 # Standard library imports
 import re
+import datetime
 
 # Zope imports
-import DateTime
 from Products.Five import BrowserView
 from zope.interface import implements
 from zope.component import getMultiAdapter
@@ -220,10 +220,10 @@ def getPublicationDate(struct):
     try:
         val = ed.value
         datetime_string = "%s-%s-%s%s" % (val[0:4], val[4:6], val[6:8], val[8:])
-        return DateTime.DateTime(datetime_string)
+        return datetime.datetime(datetime_string)
     except AttributeError:
         # We obviously didn't receive a xmlrpclib DateTime instance, so we
-        # can return the default unchanged (as it already is a Zope.DateTime
+        # can return the default unchanged (as it already is a datetime
         # instance):
         return ed
 
