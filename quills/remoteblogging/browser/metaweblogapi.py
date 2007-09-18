@@ -1,6 +1,5 @@
 # Standard library imports
 import re
-import datetime
 
 # Zope imports
 from Products.Five import BrowserView
