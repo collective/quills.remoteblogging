@@ -115,14 +115,12 @@ class MetaWeblogAPI(BrowserView):
     def getUsersBlogs(self, appkey, username, password):
         """See IMetaWeblogAPI.
         """
-        app = IUIDManager(self.context).getByUID(appkey)
-        return IUserManager(app).getWeblogsForUser(username)
+        return IUserManager(self.context).getWeblogsForUser(username)
 
     def getUserInfo(self, appkey, username, password):
         """See IMetaWeblogAPI.
         """
-        app = IUIDManager(self.context).getByUID(appkey)
-        return IUserManager(app).getUserInfo(username)
+        return IUserManager(self.context).getUserInfo(username)
 
     def entryStruct(self, entry):
         """See IMetaWeblogAPI.
@@ -213,17 +211,5 @@ def getPublicationDate(struct):
     """Extract the effective date from the struct, or return a default
     value.
     """
-    ed = struct.get('pubdate', struct.get('datecreated'))
-    # Due to strange developments in Zope2.9 resp. xmlrpclib we need to parse
-    # the XMLRPC-DateTime object's string representation and then construct a
-    # 'proper' DateTime instance from a string assembled from those parsed bits.
-    try:
-        val = ed.value
-        datetime_string = "%s-%s-%s%s" % (val[0:4], val[4:6], val[6:8], val[8:])
-        return datetime.datetime(datetime_string)
-    except AttributeError:
-        # We obviously didn't receive a xmlrpclib DateTime instance, so we
-        # can return the default unchanged (as it already is a datetime
-        # instance):
-        return ed
+    return struct.get('pubdate', struct.get('datecreated', None))
 
