@@ -40,8 +40,7 @@ class MetaWeblogAPI(BrowserView):
                                 text=text,
                                 topics=topics,)
         if publish:
-            pubdate = getPublicationDate(struct)
-            IWorkflowedWeblogEntry(entry).publish(pubdate)
+            IWorkflowedWeblogEntry(entry).publish()
         return IUIDManager(entry).getUID()
 
     def editPost(self, postid, username, password, struct, publish):
@@ -56,8 +55,7 @@ class MetaWeblogAPI(BrowserView):
         topics = struct.get('categories')
         entry.edit(title, excerpt, text, topics)
         if publish:
-            pubdate = getPublicationDate(struct)
-            IWorkflowedWeblogEntry(entry).publish(pubdate)
+            IWorkflowedWeblogEntry(entry).publish()
         return True
 
     def getPost(self, postid, username, password):
