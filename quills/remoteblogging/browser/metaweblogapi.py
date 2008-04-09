@@ -119,17 +119,34 @@ class MetaWeblogAPI(BrowserView):
         """
         return IUserManager(self.context).getUserInfo(username)
 
+    def newMediaObject(self, blogid, username, password, struct):
+        """See IMetaWeblogAPI
+        """
+        # These first three are required to be present by the spec.
+        name = struct['name']
+        mimetype = struct['type']
+        bits = struct['bits']
+        # We support the presence of a 'title' element, just in case the client
+        # sends it.
+        title = struct.get('title', '')
+        weblog = IUIDManager(self.context).getByUID(blogid)
+        weblog = IWeblog(weblog)
+        obj = weblog.addFile(bits, mimetype, name, title)
+        # XXX This next line should almost certainly adapt to IAbsoluteURL,
+        #     rather than assume that the returned object has an absolute_url
+        #     method!
+        if getattr(obj, 'absolute_url', None):
+            url = obj.absolute_url()
+        else:
+            url = obj.context.absolute_url()
+        return {'url': url}
+
     def entryStruct(self, entry):
         """See IMetaWeblogAPI.
         """
-        # make sure we got an object, not just a brain
-        try:
-            entry = entry.getObject()
-        except AttributeError:
-            pass
-        body = entry.getRawText()
+        body = entry.getText()
         # if the post is HTML we attempt to inject its excerpt into the body:
-        if entry.text.getContentType() == 'text/html':
+        if entry.getMimeType() == 'text/html':
             excerpt = entry.getExcerpt()
             body = self.embedExcerptInBody(body, excerpt)
 

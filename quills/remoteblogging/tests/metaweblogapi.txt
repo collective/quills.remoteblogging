@@ -109,3 +109,26 @@ Now getRecentPosts shows our post.
     'link': '...',
     'postid': '...',
     'title': 'the post title - amended'}]
+
+Adding a new file/image object should be possible as well.  We'll open up a test
+file from the file system.
+
+  >>> import quills.remoteblogging as qr
+  >>> import os.path
+  >>> path = os.path.dirname(qr.__file__)
+  >>> img = file('%s/tests/quills_powered.gif' % path, 'rb').read()
+
+Now we can add the file through the metaweblog API.
+
+  >>> imgupstruct = {'name'     : 'our-chosen-name.gif',
+  ...                'type'     : 'image/gif',
+  ...                'bits'     : img,
+  ...                'title'    : 'A Special title that could be ignored',
+  ...               }
+  >>> resp = mwview.newMediaObject(blogid, 'username', 'password', imgupstruct)
+
+We should have been returned a dictionary containing the url of the newly
+uploaded file.
+
+  >>> resp.has_key('url')
+  True
