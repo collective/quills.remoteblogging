@@ -131,7 +131,7 @@ class MetaWeblogAPI(BrowserView):
         title = struct.get('title', '')
         weblog = IUIDManager(self.context).getByUID(blogid)
         weblog = IWeblog(weblog)
-        obj = weblog.addFile(bits, mimetype, name, title)
+        obj = weblog.addFile(bits.data, mimetype, name, title)
         # XXX This next line should almost certainly adapt to IAbsoluteURL,
         #     rather than assume that the returned object has an absolute_url
         #     method!
