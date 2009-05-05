@@ -1,0 +1,50 @@
+Test-cases for fixed bugs in quills.remoteblogging
+==================================================
+
+The test-case class should have made self.mwenabled, self.blogid, self.appkey
+and self.bloguserid available to us.  We'll check that (and save a few
+keystrokes in this file).
+
+  >>> mwenabled = self.mwenabled
+  >>> appkey = self.appkey
+  >>> blogid = self.blogid
+  >>> bloguserid = self.bloguserid
+
+Given that the object is MetaWeblogAPI-enabled (probably by some sort of ZCML
+configuration), we should be able to lookup the appropriate view on it.  First
+we need a bit of infrastructure.
+
+  >>> from zope.component import getMultiAdapter
+  >>> from zope.publisher.browser import TestRequest
+  >>> request = TestRequest()
+
+Now we can lookup the view.
+
+  >>> mwview = getMultiAdapter((mwenabled, request), name='metaWeblog')
+
+Issue #167: Characters illegal for id break image upload
+--------------------------------------------------------
+
+Originally, this has been in error in MarsEdit which prepends a slash to
+the image name while uploading. However Quills should be robust enough to
+cope with blunders like that.
+
+The following is taken from metaweblogapi.txt, except for the 'name'.
+
+  >>> import quills.remoteblogging as qr
+  >>> import xmlrpclib
+  >>> import os.path
+  >>> path = os.path.dirname(qr.__file__)
+  >>> img = file('%s/tests/quills_powered.gif' % path, 'rb').read()
+  >>> encImg = xmlrpclib.Binary(img)
+
+Now we can add the file through the metaweblog API.
+
+  >>> imgupstruct = {'name'     : u'/name-with-a-släsh.gif',
+  ...                'type'     : 'image/gif',
+  ...                'bits'     : encImg,
+  ...                'title'    : 'A Special title that could be ignored',
+  ...               }
+  >>> resp = mwview.newMediaObject(blogid, 'username', 'password', imgupstruct)
+  >>> resp.has_key('url')
+  True
