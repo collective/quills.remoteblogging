@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = '0.1'
+version = '1.7.0c1'
 
 setup(name='quills.remoteblogging',
       version=version,
